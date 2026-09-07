@@ -14,13 +14,16 @@
         let animationFrameId;
         let renderer;
         let controls;
+        let japanGroup;
 
         // ------------------------------------------------------------
         // シーン
         // ------------------------------------------------------------
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf5f7fa);
+
+        // アレンジ1：背景を淡い青に変更
+        scene.background = new THREE.Color(0xdff3ff);
 
         // ------------------------------------------------------------
         // カメラ
@@ -41,22 +44,22 @@
 
         const ambientLight = new THREE.AmbientLight(
             0xffffff,
-            2.0,
+            2.2,
         );
 
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(
             0xffffff,
-            3.0,
+            3.5,
         );
 
         directionalLight.position.set(-5, -5, 15);
         scene.add(directionalLight);
 
         const directionalLight2 = new THREE.DirectionalLight(
-            0xffffff,
-            1.5,
+            0x8fd3ff,
+            2.0,
         );
 
         directionalLight2.position.set(10, 5, 8);
@@ -102,17 +105,6 @@
 
         // ------------------------------------------------------------
         // 地図の座標変換
-        //
-        // GeoJSON:
-        // [経度, 緯度]
-        //
-        // Three.js:
-        // X = 経度
-        // Y = 緯度
-        // Z = 高さ
-        //
-        // 北を上、東を右として扱う。
-        // 負のスケールによる反転は行わない。
         // ------------------------------------------------------------
 
         const SCALE_X = 0.14;
@@ -199,7 +191,6 @@
                 return meshes;
             }
 
-            // 内側リングを穴として登録
             for (
                 let i = 1;
                 i < coordinates.length;
@@ -253,24 +244,17 @@
                 );
             }
 
-            // 日本列島を薄く押し出して3D化
             const geometry =
                 new THREE.ExtrudeGeometry(
                     shape,
                     {
-                        depth: 0.18,
+                        depth: 0.22,
                         bevelEnabled: false,
                         curveSegments: 2,
                         steps: 1,
                     },
                 );
 
-            /*
-             * 表裏両面を描画する。
-             *
-             * GeoJSONのリング方向によって
-             * 裏返って見えなくなることを防止。
-             */
             material.side =
                 THREE.DoubleSide;
 
@@ -319,27 +303,27 @@
         // ------------------------------------------------------------
 
         const createJapan = (geojson) => {
-            const japanGroup =
+            japanGroup =
                 new THREE.Group();
 
-            // 陸地
+            // アレンジ2：陸地を明るい青緑に変更
             const landMaterial =
                 new THREE.MeshStandardMaterial(
                     {
-                        color: 0x4caf70,
-                        roughness: 0.82,
-                        metalness: 0.0,
+                        color: 0x23b5a6,
+                        roughness: 0.65,
+                        metalness: 0.08,
                         side: THREE.DoubleSide,
                     },
                 );
 
-            // 境界線
+            // 境界線も青系に変更
             const borderMaterial =
                 new THREE.LineBasicMaterial(
                     {
-                        color: 0x174d2b,
+                        color: 0x075985,
                         transparent: true,
-                        opacity: 0.85,
+                        opacity: 0.9,
                     },
                 );
 
@@ -356,7 +340,6 @@
 
                 let meshes = [];
 
-                // Polygon
                 if (
                     geometry.type ===
                     "Polygon"
@@ -368,7 +351,6 @@
                         );
                 }
 
-                // MultiPolygon
                 if (
                     geometry.type ===
                     "MultiPolygon"
@@ -380,16 +362,11 @@
                         );
                 }
 
-                // メッシュを追加
                 for (
                     const mesh of meshes
                 ) {
                     japanGroup.add(mesh);
                 }
-
-                // ----------------------------------------------------
-                // 境界線
-                // ----------------------------------------------------
 
                 const drawRing = (
                     ring,
@@ -418,12 +395,11 @@
                                 return new THREE.Vector3(
                                     point.x,
                                     point.y,
-                                    0.19,
+                                    0.23,
                                 );
                             },
                         );
 
-                    // 閉じる
                     points.push(
                         points[0].clone(),
                     );
@@ -463,8 +439,7 @@
                             geometry.coordinates
                     ) {
                         for (
-                            const ring of
-                                polygon
+                            const ring of polygon
                         ) {
                             drawRing(ring);
                         }
@@ -492,23 +467,12 @@
             japanGroup.position.y -=
                 center.y;
 
-            /*
-             * 重要:
-             *
-             * 負のscaleを使わない。
-             *
-             * scale.set(-1, 1, 1)
-             * scale.set(1, -1, 1)
-             *
-             * のような処理は行わない。
-             */
             japanGroup.scale.set(
                 1,
                 1,
                 1,
             );
 
-            // 回転もしない
             japanGroup.rotation.set(
                 0,
                 0,
@@ -560,8 +524,6 @@
             );
 
             controls.update();
-
-            return japanGroup;
         };
 
         // ------------------------------------------------------------
@@ -665,6 +627,11 @@
                     animate,
                 );
 
+            // アレンジ3：日本列島をゆっくり自動回転
+            if (japanGroup) {
+                japanGroup.rotation.z += 0.0012;
+            }
+
             controls.update();
 
             renderer.render(
@@ -735,15 +702,21 @@
 </script>
 
 <svelte:head>
-    <title>日本列島 3Dモデル</title>
+    <title>日本列島 3Dモデル - アレンジ版</title>
 </svelte:head>
 
 <div class="page">
     <header class="header">
-        <h1>日本列島 3Dモデル</h1>
+        <div class="badge">
+            3D MAP
+        </div>
+
+        <h1>
+            日本列島 3Dモデル
+        </h1>
 
         <p>
-            GeoJSONの日本地図をThree.jsで立体化しています。
+            GeoJSONとThree.jsを使った、日本列島の3Dビジュアライザー
         </p>
     </header>
 
@@ -767,7 +740,13 @@
 
     <footer class="footer">
         <p>
-            ドラッグ：回転　／　ホイール：ズーム　／　右ドラッグ：移動
+            🖱 ドラッグ：回転　
+            ／ ホイール：ズーム　
+            ／ 右ドラッグ：移動
+        </p>
+
+        <p>
+            日本列島はゆっくり自動回転します。
         </p>
 
         <p>
@@ -788,14 +767,21 @@
     }
 
     :global(body) {
-        background: #f5f7fa;
+        background:
+            linear-gradient(
+                135deg,
+                #e0f2fe,
+                #f0fdfa
+            );
+
         font-family:
             system-ui,
             -apple-system,
             BlinkMacSystemFont,
             "Segoe UI",
             sans-serif;
-        color: #263238;
+
+        color: #0f172a;
     }
 
     .page {
@@ -807,18 +793,30 @@
 
     .header {
         width: min(1200px, 100%);
-        margin: 0 auto 16px;
+        margin: 0 auto 18px;
+    }
+
+    .badge {
+        display: inline-block;
+        margin-bottom: 8px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: #0ea5e9;
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
     }
 
     h1 {
         margin: 0 0 8px;
-        font-size: 28px;
-        font-weight: 700;
+        font-size: 32px;
+        font-weight: 800;
     }
 
     .header p {
         margin: 0;
-        color: #607d8b;
+        color: #475569;
         font-size: 14px;
     }
 
@@ -829,10 +827,28 @@
         min-height: 500px;
         margin: 0 auto;
         overflow: hidden;
-        border-radius: 16px;
+
+        border-radius: 24px;
+
         background: #ffffff;
+
+        border:
+            1px solid
+            rgba(
+                14,
+                165,
+                233,
+                0.15
+            );
+
         box-shadow:
-            0 8px 30px rgba(0, 0, 0, 0.08);
+            0 20px 60px
+            rgba(
+                15,
+                23,
+                42,
+                0.12
+            );
     }
 
     canvas {
@@ -847,24 +863,42 @@
         z-index: 10;
         top: 20px;
         left: 50%;
-        transform: translateX(-50%);
-        padding: 12px 18px;
-        border-radius: 999px;
-        background: rgba(
-            255,
-            255,
-            255,
-            0.95
-        );
+
+        transform:
+            translateX(-50%);
+
+        padding:
+            12px 18px;
+
+        border-radius:
+            999px;
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.95
+            );
+
         box-shadow:
             0 4px 16px
-            rgba(0, 0, 0, 0.12);
-        font-size: 14px;
-        white-space: nowrap;
+            rgba(
+                0,
+                0,
+                0,
+                0.12
+            );
+
+        font-size:
+            14px;
+
+        white-space:
+            nowrap;
     }
 
     .status {
-        color: #546e7a;
+        color: #0369a1;
     }
 
     .error {
@@ -874,10 +908,13 @@
 
     .footer {
         width: min(1200px, 100%);
-        margin: 12px auto 0;
-        color: #78909c;
+        margin: 14px auto 0;
+
+        color: #64748b;
+
         font-size: 12px;
-        line-height: 1.7;
+
+        line-height: 1.8;
     }
 
     .footer p {
@@ -892,18 +929,24 @@
         .viewer {
             min-height: 420px;
             height: 70vh;
-            border-radius: 12px;
+            border-radius: 16px;
         }
 
         h1 {
-            font-size: 22px;
+            font-size: 24px;
         }
 
         .status,
         .error {
-            max-width: calc(100% - 32px);
+            max-width:
+                calc(
+                    100% - 32px
+                );
+
             overflow: hidden;
-            text-overflow: ellipsis;
+
+            text-overflow:
+                ellipsis;
         }
     }
 </style>
